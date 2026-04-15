@@ -1,6 +1,6 @@
-import { Bot, CheckCircle2, Download, Globe, RefreshCw, Send, User } from 'lucide-react';
+import { ArrowLeft, Bot, CheckCircle2, Download, Globe, RefreshCw, Send, User } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { QUESTION_FLOWS } from '../constants';
 import { generateOfferPDF } from '../lib/pdfGenerator';
@@ -10,41 +10,56 @@ import { Typewriter } from './Typewriter';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+const createInitialAssistantMessage = (lang: Language): ChatMessage => {
+  const initialQuestion = QUESTION_FLOWS.initial[0];
+  return {
+    id: '1',
+    role: 'assistant',
+    content: initialQuestion.question[lang],
+    timestamp: Date.now(),
+    type: 'options',
+    options: initialQuestion.options,
+    questionId: initialQuestion.id
+  };
+};
+
 export default function ChatInterface() {
   const [language, setLanguage] = useState<Language>('en');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [createInitialAssistantMessage('en')]);
   const [offerState, setOfferState] = useState<OfferState>({ language: 'en' });
   const [currentQuestionId, setCurrentQuestionId] = useState<string>('service_selection');
   const [history, setHistory] = useState<{ questionId: string; state: OfferState }[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [pendingMessages, setPendingMessages] = useState<ChatMessage[]>([]);
+  const [languageSwitchTo, setLanguageSwitchTo] = useState<Language | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const t = (en: string, de: string) => (language === 'en' ? en : de);
 
-  // Initialize chat
-  useEffect(() => {
-    if (messages.length === 0) {
-      const initialQuestion = QUESTION_FLOWS.initial[0];
-      setMessages([
-        {
-          id: '1',
-          role: 'assistant',
-          content: initialQuestion.question[language],
-          timestamp: Date.now(),
-          type: 'options',
-          options: initialQuestion.options,
-          questionId: initialQuestion.id
-        }
-      ]);
-    }
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  }, []);
+
+  const scrollToBottomAuto = useCallback(() => {
+    scrollToBottom('auto');
+  }, [scrollToBottom]);
+
+  const startNewSession = useCallback((newLang: Language) => {
+    setLanguage(newLang);
+    setOfferState({ language: newLang });
+    setHistory([]);
+    setCurrentQuestionId('service_selection');
+    setInputValue('');
+    setIsTyping(false);
+    setPendingMessages([]);
+    setMessages([createInitialAssistantMessage(newLang)]);
   }, []);
 
   // Scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    scrollToBottom('smooth');
+  }, [messages, isTyping, scrollToBottom]);
 
   const getCurrentQuestion = () => {
     const allQuestions = Object.values(QUESTION_FLOWS).flat();
@@ -268,21 +283,7 @@ export default function ChatInterface() {
   };
 
   const resetChat = () => {
-    setOfferState({ language });
-    setHistory([]);
-    setCurrentQuestionId('service_selection');
-    const initialQuestion = QUESTION_FLOWS.initial[0];
-    setMessages([
-      {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: initialQuestion.question[language],
-        timestamp: Date.now(),
-        type: 'options',
-        options: initialQuestion.options,
-        questionId: initialQuestion.id
-      }
-    ]);
+    startNewSession(language);
   };
 
   const handleBack = () => {
@@ -326,8 +327,7 @@ export default function ChatInterface() {
           <button
             onClick={() => {
               const newLang = language === 'en' ? 'de' : 'en';
-              setLanguage(newLang);
-              setOfferState(prev => ({ ...prev, language: newLang }));
+              setLanguageSwitchTo(newLang);
             }}
             className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-black transition-colors px-3 py-1.5 rounded-full border border-gray-200"
           >
@@ -340,7 +340,7 @@ export default function ChatInterface() {
             className="p-2 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-all disabled:opacity-20"
             title={t('Go Back', 'Zurück')}
           >
-            <RefreshCw className="w-5 h-5 rotate-[-90deg]" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <button
             onClick={resetChat}
@@ -383,6 +383,7 @@ export default function ChatInterface() {
                       <Typewriter 
                         text={msg.content} 
                         onComplete={() => handleTypewriterComplete(msg.id)}
+                        onUpdate={messages[messages.length - 1]?.id === msg.id ? scrollToBottomAuto : undefined}
                       />
                     ) : (
                       <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -448,7 +449,7 @@ export default function ChatInterface() {
                   <Bot className="w-4 h-4 text-white" />
                 </div>
                 <div className="bg-white border border-gray-100 px-5 py-3 rounded-2xl rounded-tl-none shadow-sm flex items-center">
-                  <span className="text-xs font-medium text-gray-400 animate-pulse">
+                  <span className="text-sm font-medium text-gray-400 animate-pulse">
                     {t('Thinking', 'Denkt nach')}
                   </span>
                 </div>
@@ -495,6 +496,39 @@ export default function ChatInterface() {
           </p>
         </div>
       </footer>
+
+      {languageSwitchTo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {t('Restart required', 'Neustart erforderlich')}
+            </h2>
+            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+              {t(
+                'Changing the language starts a fresh chat session and clears your current progress. Continue?',
+                'Das Wechseln der Sprache startet eine neue Chat-Sitzung und löscht Ihren aktuellen Fortschritt. Fortfahren?'
+              )}
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setLanguageSwitchTo(null)}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-all"
+              >
+                Abort
+              </button>
+              <button
+                onClick={() => {
+                  startNewSession(languageSwitchTo);
+                  setLanguageSwitchTo(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-black text-white font-semibold hover:bg-gray-800 transition-all"
+              >
+                Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

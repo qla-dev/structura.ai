@@ -48,7 +48,7 @@ export const QUESTION_FLOWS: Record<string, QuestionNode[]> = {
       id: 'facade_thickness',
       field: 'thickness',
       question: {
-        en: "What thickness (debljina) would you like?",
+        en: "What thickness would you like?",
         de: "Welche Dämmstärke wünschen Sie?"
       },
       type: 'choice',

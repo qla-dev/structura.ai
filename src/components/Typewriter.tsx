@@ -5,9 +5,10 @@ interface TypewriterProps {
   text: string;
   speed?: number;
   onComplete?: () => void;
+  onUpdate?: () => void;
 }
 
-export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 15, onComplete }) => {
+export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 15, onComplete, onUpdate }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -27,6 +28,12 @@ export const Typewriter: React.FC<TypewriterProps> = ({ text, speed = 15, onComp
       return () => clearTimeout(timeout);
     }
   }, [currentIndex, text, speed, onComplete]);
+
+  useEffect(() => {
+    if (!onUpdate) return;
+    const raf = requestAnimationFrame(() => onUpdate());
+    return () => cancelAnimationFrame(raf);
+  }, [displayedText, onUpdate]);
 
   return (
     <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-strong:font-bold prose-strong:text-inherit">
