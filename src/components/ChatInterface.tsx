@@ -314,9 +314,9 @@ export default function ChatInterface() {
   const currentQuestion = getCurrentQuestion();
 
   return (
-    <div className="flex flex-col h-screen bg-[#F5F5F5] font-sans text-[#1A1A1A]">
+    <div className="flex flex-col h-[100dvh] bg-[#F5F5F5] font-sans text-[#1A1A1A] overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm">
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0 shadow-sm sticky top-0 z-20">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
             <Bot className="text-white w-5 h-5" />
@@ -353,7 +353,7 @@ export default function ChatInterface() {
       </header>
 
       {/* Chat Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+      <main className="flex-1 overflow-y-auto overscroll-y-contain p-4 md:p-8 space-y-6">
         <div className="max-w-3xl mx-auto space-y-6">
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
@@ -461,7 +461,7 @@ export default function ChatInterface() {
       </main>
 
       {/* Input Area */}
-      <footer className="bg-white border-t border-gray-200 p-4 md:p-6 shrink-0">
+      <footer className="bg-white border-t border-gray-200 p-4 md:p-6 shrink-0 sticky bottom-0 z-20">
         <div className="max-w-3xl mx-auto">
           {currentQuestionId !== 'summary' ? (
             <form onSubmit={handleTextInput} className="relative flex items-center gap-2">
@@ -470,7 +470,7 @@ export default function ChatInterface() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={currentQuestion?.placeholder?.[language] || t('Type your answer...', 'Geben Sie Ihre Antwort ein...')}
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all pr-14"
+                className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-base md:text-[15px] focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all pr-14"
                 autoFocus
               />
               {currentQuestion?.unit && (
@@ -491,7 +491,7 @@ export default function ChatInterface() {
               {t('Offer completed. Download above.', 'Angebot abgeschlossen. Oben herunterladen.')}
             </div>
           )}
-          <p className="text-center text-[10px] text-gray-400 mt-3 uppercase tracking-widest font-medium">
+          <p className="text-center text-[9px] text-gray-400 mt-3 uppercase tracking-widest font-medium">
             Powered by Structura AI • Professional Construction Estimates
           </p>
         </div>

@@ -7,7 +7,7 @@ import ChatInterface from './components/ChatInterface';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-full bg-gray-50 overflow-hidden">
       <ChatInterface />
     </div>
   );
